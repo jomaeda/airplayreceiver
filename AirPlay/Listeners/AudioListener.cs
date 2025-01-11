@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -479,6 +480,9 @@ namespace AirPlay.Listeners
         private void InitializeDecoder (AudioFormat audioFormat)
         {
             if (_decoder != null) return;
+
+            // 呼び出すデコーダーをちょっと確認
+            Debug.WriteLine($"Initializing decoder for audio format: {audioFormat}");
 
             if (audioFormat == AudioFormat.ALAC)
             {

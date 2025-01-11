@@ -329,8 +329,8 @@ namespace System.Runtime.Serialization.Plists
             {
                 using (MemoryStream stream = new MemoryStream())
                 {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(stream, value);
+                    DataContractSerializer serializer = new DataContractSerializer(value.GetType());
+                    serializer.WriteObject(stream, value);
 
                     stream.Position = 0;
                     buffer = new byte[stream.Length];
@@ -340,6 +340,18 @@ namespace System.Runtime.Serialization.Plists
                         bufferIndex += count;
                     }
                 }
+                //{
+                //    BinaryFormatter formatter = new BinaryFormatter();
+                //    formatter.Serialize(stream, value);
+
+                //    stream.Position = 0;
+                //    buffer = new byte[stream.Length];
+
+                //    while (0 < (count = stream.Read(buffer, 0, buffer.Length - bufferIndex)))
+                //    {
+                //        bufferIndex += count;
+                //    }
+                //}
             }
 
             BinaryPlistItem item = new BinaryPlistItem(value);
