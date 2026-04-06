@@ -18,6 +18,9 @@ namespace AirPlay
         public event EventHandler<decimal> OnSetVolumeReceived;
         public event EventHandler<H264Data> OnH264DataReceived;
         public event EventHandler<PcmData> OnPCMDataReceived;
+        public event EventHandler<TrackMetadata> OnTrackMetadataReceived;
+        public event EventHandler<TrackArtwork> OnTrackArtworkReceived;
+        public event EventHandler<AudioFlushData> OnAudioFlushReceived;
 
         public const string AirPlayType = "_airplay._tcp";
         public const string AirTunesType = "_raop._tcp";
@@ -80,9 +83,11 @@ namespace AirPlay
             };
 
             // Internally 'ServiceProfile' create the SRV record
+            // https://openairplay.github.io/airplay-spec/service_discovery.html            
             var airTunes = new ServiceProfile($"{deviceIdInstance}@{_instance}", AirTunesType, _airTunesPort);
             airTunes.AddProperty("ch", "2");
-            airTunes.AddProperty("cn", "2,3");
+            //airTunes.AddProperty("cn", "2,3");
+            airTunes.AddProperty("cn", "0");//PCM only
             airTunes.AddProperty("et", "0,3,5");
             airTunes.AddProperty("md", "0,1,2");
             airTunes.AddProperty("sr", "44100");
@@ -140,6 +145,21 @@ namespace AirPlay
         public void OnPCMData(PcmData data)
         {
             OnPCMDataReceived?.Invoke(this, data);
+        }
+
+        public void OnTrackMetadata(TrackMetadata metadata)
+        {
+            OnTrackMetadataReceived?.Invoke(this, metadata);
+        }
+
+        public void OnTrackArtwork(TrackArtwork artwork)
+        {
+            OnTrackArtworkReceived?.Invoke(this, artwork);
+        }
+
+        public void OnAudioFlush(AudioFlushData flush)
+        {
+            OnAudioFlushReceived?.Invoke(this, flush);
         }
     }
 }

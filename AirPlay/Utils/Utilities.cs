@@ -59,19 +59,22 @@ namespace AirPlay.Utils
         {
             var stream = new MemoryStream();
 
-            BinaryWriter bwl = new BinaryWriter(stream);
-            bwl.Write(new char[4] { 'R', 'I', 'F', 'F' });
-            bwl.Write(tot + 38);
-            bwl.Write(new char[8] { 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ' });
-            bwl.Write((int)bitsPerSample);
-            bwl.Write((short)1);
-            bwl.Write(numchannels);
-            bwl.Write(sampleRate);
-            bwl.Write((int)(sampleRate * ((bitsPerSample * numchannels) / 8)));
-            bwl.Write((short)((bitsPerSample * numchannels) / 8));
-            bwl.Write(bitsPerSample);
-            bwl.Write(new char[4] { 'd', 'a', 't', 'a' });
-            bwl.Write(tot);
+            using (BinaryWriter bwl = new BinaryWriter(stream, Encoding.ASCII, true))
+            {
+                bwl.Write(Encoding.ASCII.GetBytes("RIFF"));
+                bwl.Write(tot + 36);
+                bwl.Write(Encoding.ASCII.GetBytes("WAVE"));
+                bwl.Write(Encoding.ASCII.GetBytes("fmt "));
+                bwl.Write(16);
+                bwl.Write((short)1);
+                bwl.Write(numchannels);
+                bwl.Write(sampleRate);
+                bwl.Write((int)(sampleRate * ((bitsPerSample * numchannels) / 8)));
+                bwl.Write((short)((bitsPerSample * numchannels) / 8));
+                bwl.Write(bitsPerSample);
+                bwl.Write(Encoding.ASCII.GetBytes("data"));
+                bwl.Write(tot);
+            }
 
             return stream.ToArray();
         }

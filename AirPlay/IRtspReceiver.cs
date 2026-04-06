@@ -10,5 +10,8 @@ namespace AirPlay
         void OnSetVolume(decimal volume);
         void OnData(H264Data data);
         void OnPCMData(PcmData data);
+        void OnTrackMetadata(TrackMetadata metadata);
+        void OnTrackArtwork(TrackArtwork artwork);
+        void OnAudioFlush(AudioFlushData flush);
     }
 }

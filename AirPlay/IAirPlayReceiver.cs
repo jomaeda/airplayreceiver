@@ -10,6 +10,9 @@ namespace AirPlay
         event EventHandler<decimal> OnSetVolumeReceived;
         event EventHandler<H264Data> OnH264DataReceived;
         event EventHandler<PcmData> OnPCMDataReceived;
+        event EventHandler<TrackMetadata> OnTrackMetadataReceived;
+        event EventHandler<TrackArtwork> OnTrackArtworkReceived;
+        event EventHandler<AudioFlushData> OnAudioFlushReceived;
 
         Task StartListeners(CancellationToken cancellationToken);
 

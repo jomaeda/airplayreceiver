@@ -34,6 +34,7 @@ namespace AirPlay
             //    _writer.Write(_audiobuf.ToArray(), 0, _audiobuf.Count);
             //}
 
+
             var builder = new HostBuilder()
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
@@ -63,8 +64,14 @@ namespace AirPlay
                     services.Configure<AirPlayReceiverConfig>(hostContext.Configuration.GetSection("AirPlayReceiver"));
                     services.Configure<CodecLibrariesConfig>(hostContext.Configuration.GetSection("CodecLibraries"));
                     services.Configure<DumpConfig>(hostContext.Configuration.GetSection("Dump"));
+                    services.Configure<RecordingConfig>(hostContext.Configuration.GetSection("Recording"));
 
                     services.AddSingleton<IAirPlayReceiver, AirPlayReceiver>();
+                    services.AddSingleton(sp =>
+                    {
+                        var config = sp.GetRequiredService<IOptions<RecordingConfig>>();
+                        return new Services.AudioRecordingService(config.Value);
+                    });
 
                     services.AddHostedService<AirPlayService>();
                 })

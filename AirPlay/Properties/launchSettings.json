@@ -2,7 +2,7 @@
   "profiles": {
     "AirPlay": {
       "commandName": "Project",
-      "nativeDebugging": false
+      "nativeDebugging": true
     }
   }
 }

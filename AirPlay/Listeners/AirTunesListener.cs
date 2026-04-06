@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Plists;
@@ -485,7 +486,7 @@ namespace AirPlay.Listeners
                             if (key.Equals("volume", StringComparison.OrdinalIgnoreCase))
                             {
                                 // request.Body contains 'volume: N.NNNNNN'
-                                _receiver.OnSetVolume(decimal.Parse(val));
+                                _receiver.OnSetVolume(decimal.Parse(val, CultureInfo.InvariantCulture));
                             }
                             else if (key.Equals("progress", StringComparison.OrdinalIgnoreCase))
                             {
@@ -499,16 +500,24 @@ namespace AirPlay.Listeners
                             }
                         }
                     }
-                    else if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase))
+                    else if (contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                     {
-                        var image = request.Body;
-
-                        // DO SOMETHING W/ IMAGE
+                        _receiver.OnTrackArtwork(new TrackArtwork
+                        {
+                            SessionId = sessionId,
+                            ContentType = contentType,
+                            Data = request.Body.ToArray()
+                        });
                     }
                     else if (contentType.Equals("application/x-dmap-tagged", StringComparison.OrdinalIgnoreCase))
                     {
                         var dmap = new DMapTagged();
                         var output = dmap.Decode(request.Body);
+                        var metadata = CreateTrackMetadata(sessionId, output);
+                        if (metadata != null)
+                        {
+                            _receiver.OnTrackMetadata(metadata);
+                        }
                     }
                 }
             }
@@ -541,7 +550,16 @@ namespace AirPlay.Listeners
                     }
                 }
 
-                await session.AudioControlListener.FlushAsync(next_seq);
+                if (session.AudioControlListener != null)
+                {
+                    await session.AudioControlListener.FlushAsync(next_seq);
+                }
+
+                _receiver.OnAudioFlush(new AudioFlushData
+                {
+                    SessionId = sessionId,
+                    NextSequence = next_seq
+                });
             }
             if (request.Type == RequestType.TEARDOWN)
             {
@@ -577,6 +595,60 @@ namespace AirPlay.Listeners
 
             // Save current session
             await SessionManager.Current.CreateOrUpdateSessionAsync(sessionId, session);
+        }
+
+        private static TrackMetadata CreateTrackMetadata(string sessionId, Dictionary<string, object> payload)
+        {
+            if (payload == null || payload.Count == 0)
+            {
+                return null;
+            }
+
+            var metadata = new TrackMetadata
+            {
+                SessionId = sessionId,
+                Title = GetString(payload, "minm"),
+                Artist = GetString(payload, "asar"),
+                AlbumArtist = GetString(payload, "asaa"),
+                Album = GetString(payload, "asal"),
+                Genre = GetString(payload, "asgn"),
+                Composer = GetString(payload, "ascp"),
+                TrackNumber = GetUShort(payload, "astn"),
+                TrackCount = GetUShort(payload, "astc"),
+                DurationMs = GetInt(payload, "astm"),
+                PersistentId = GetULong(payload, "mper"),
+                Raw = payload.ToDictionary(pair => pair.Key, pair => pair.Value)
+            };
+
+            if (string.IsNullOrWhiteSpace(metadata.Title) &&
+                string.IsNullOrWhiteSpace(metadata.Artist) &&
+                string.IsNullOrWhiteSpace(metadata.Album) &&
+                !metadata.PersistentId.HasValue)
+            {
+                return null;
+            }
+
+            return metadata;
+        }
+
+        private static string GetString(IReadOnlyDictionary<string, object> payload, string key)
+        {
+            return payload.TryGetValue(key, out var value) ? value?.ToString() : null;
+        }
+
+        private static ushort? GetUShort(IReadOnlyDictionary<string, object> payload, string key)
+        {
+            return payload.TryGetValue(key, out var value) ? Convert.ToUInt16(value, CultureInfo.InvariantCulture) : (ushort?)null;
+        }
+
+        private static int? GetInt(IReadOnlyDictionary<string, object> payload, string key)
+        {
+            return payload.TryGetValue(key, out var value) ? Convert.ToInt32(value, CultureInfo.InvariantCulture) : (int?)null;
+        }
+
+        private static ulong? GetULong(IReadOnlyDictionary<string, object> payload, string key)
+        {
+            return payload.TryGetValue(key, out var value) ? Convert.ToUInt64(value, CultureInfo.InvariantCulture) : (ulong?)null;
         }
 
         private string GetAudioFormatDescription(int format)

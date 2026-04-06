@@ -175,8 +175,14 @@ namespace AirPlay.Listeners
                         // Dequeue all frames in queue
                         while ((audiobuf = RaopBufferDequeue(_raopBuffer, ref audiobuflen, ref timestamp, no_resend)) != null)
                         {
+                            if (audiobuflen <= 0 || audiobuf.Length == 0)
+                            {
+                                continue;
+                            }
+
                             var pcmData = new PcmData();
-                            pcmData.Length = 960;
+                            pcmData.SessionId = _sessionId;
+                            pcmData.Length = audiobuflen;
                             pcmData.Data = audiobuf;
 
                             pcmData.Pts = (ulong)(timestamp - _sync_timestamp) * 1000000UL / 44100 + _sync_time;
@@ -301,6 +307,11 @@ namespace AirPlay.Listeners
 #endif
             /* RAW -> PCM */
             var length = _decoder.GetOutputStreamLength();
+            if (length <= 0)
+            {
+                length = raw.Length;
+            }
+
             var output = new byte[length];
 
             var res = _decoder.DecodeFrame(raw, ref output, length);
@@ -317,6 +328,12 @@ namespace AirPlay.Listeners
             Console.WriteLine($"LNG: {length}");
             File.WriteAllBytes($"{pPath}raw_{seqnum}", output);
 #endif
+            if (entry.AudioBuffer == null || entry.AudioBuffer.Length < output.Length)
+            {
+                entry.AudioBuffer = new byte[output.Length];
+                entry.AudioBufferSize = output.Length;
+            }
+
             Array.Copy(output, 0, entry.AudioBuffer, 0, output.Length);
             entry.AudioBufferLen = output.Length;
 
@@ -483,6 +500,10 @@ namespace AirPlay.Listeners
 
             // 呼び出すデコーダーをちょっと確認
             Debug.WriteLine($"Initializing decoder for audio format: {audioFormat}");
+
+
+            _decoder = new PCMDecoder();
+            return;
 
             if (audioFormat == AudioFormat.ALAC)
             {

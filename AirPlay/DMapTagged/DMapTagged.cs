@@ -1015,18 +1015,41 @@ namespace AirPlay.DmapTagged
 
         public Dictionary<string, object> Decode(byte[] buffer, bool useName = false)
         {
+            return DecodeItems(buffer, 8, useName);
+        }
+
+        private Dictionary<string, object> DecodeItems(byte[] buffer, int startIndex, bool useName)
+        {
             var output = new Dictionary<string, object>();
 
             var mem = new MemoryStream(buffer);
             using (var reader = new BinaryReader(mem))
             {
-                for (int i = 8; i < buffer.Length;)
+                for (int i = startIndex; i < buffer.Length;)
                 {
+                    if (buffer.Length - i < 8)
+                    {
+                        break;
+                    }
+
                     mem.Position = i;
                     var outputKey = Encoding.ASCII.GetString(reader.ReadBytes(4));
 
                     var itemLength = reader.ReadUInt32BE();
-                    var contentType = _contentTypes[outputKey];
+                    if (i + 8 + itemLength > buffer.Length)
+                    {
+                        break;
+                    }
+
+                    if (!_contentTypes.TryGetValue(outputKey, out var contentType))
+                    {
+                        contentType = new ContentTypeItem
+                        {
+                            Description = string.Empty,
+                            Name = outputKey,
+                            Type = "bytes"
+                        };
+                    }
 
                     object parsedData = null;
                     if (itemLength != 0)
@@ -1056,9 +1079,17 @@ namespace AirPlay.DmapTagged
                             {
                                 parsedData = dataReader.ReadUInt64BE();
                             }
+                            else if (contentType.Type == "list")
+                            {
+                                parsedData = DecodeItems(data, 0, useName);
+                            }
+                            else if (contentType.Type == "bytes")
+                            {
+                                parsedData = data;
+                            }
                             else
                             {
-                                parsedData = Encoding.ASCII.GetString(data);
+                                parsedData = Encoding.UTF8.GetString(data).TrimEnd('\0');
                             }
                         }
 
@@ -1069,7 +1100,7 @@ namespace AirPlay.DmapTagged
 
                         if (parsedData != null)
                         {
-                            output.Add(outputKey, parsedData);
+                            output[outputKey] = parsedData;
                         }
                     }
 

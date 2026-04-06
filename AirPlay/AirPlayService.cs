@@ -14,13 +14,15 @@ namespace AirPlay
     {
         private readonly IAirPlayReceiver _airPlayReceiver;
         private readonly DumpConfig _dConfig;
+        private readonly Services.AudioRecordingService _recordingService;
 
         private List<byte> _audiobuf;
 
-        public AirPlayService(IAirPlayReceiver airPlayReceiver, IOptions<DumpConfig> dConfig)
+        public AirPlayService(IAirPlayReceiver airPlayReceiver, IOptions<DumpConfig> dConfig, Services.AudioRecordingService recordingService)
         {
             _airPlayReceiver = airPlayReceiver ?? throw new ArgumentNullException(nameof(airPlayReceiver));
             _dConfig = dConfig?.Value ?? throw new ArgumentNullException(nameof(dConfig));
+            _recordingService = recordingService ?? throw new ArgumentNullException(nameof(recordingService));
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -72,15 +74,34 @@ namespace AirPlay
             _audiobuf = new List<byte>();
             _airPlayReceiver.OnPCMDataReceived += (s, e) =>
             {
+                _recordingService.HandlePcmData(e);
+
                 // DO SOMETHING WITH AUDIO DATA..
 #if DUMP
                 _audiobuf.AddRange(e.Data);
 #endif
             };
+
+            _airPlayReceiver.OnTrackMetadataReceived += (s, e) =>
+            {
+                _recordingService.HandleTrackMetadata(e);
+            };
+
+            _airPlayReceiver.OnTrackArtworkReceived += (s, e) =>
+            {
+                _recordingService.HandleTrackArtwork(e);
+            };
+
+            _airPlayReceiver.OnAudioFlushReceived += (s, e) =>
+            {
+                _recordingService.HandleAudioFlush(e);
+            };
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
+            _recordingService.CompleteAll();
+
 #if DUMP
             // DUMP WAV AUDIO
             var bPath = _dConfig.Path;
@@ -100,7 +121,7 @@ namespace AirPlay
 
         public void Dispose()
         {
-
+            _recordingService.Dispose();
         }
     }
 }

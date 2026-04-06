@@ -6,6 +6,30 @@ Open source implementation of AirPlay 2 Mirroring / Audio protocol in C# .Net Co
 Tested on macOS with iPhone 12 Pro iOS14.  
   
 The project is fully functional, but the AAC and ALAC libraries written in C ++ must be built.  
+
+## Recording
+
+The receiver now persists audio streams as `.wav` files and stores AirPlay track metadata alongside them.
+
+- Audio is written to the folder configured in `Recording:OutputPath`.
+- Each recorded track produces a `.wav` file.
+- When `Recording:WriteMetadataJson` is enabled, a sidecar `.json` file is written with title, artist, album, duration, and the raw DMAP payload.
+- When `Recording:SaveArtwork` is enabled, received album art is written as a sidecar `.jpg` or `.png`.
+- When `Recording:SplitTracks` is enabled, the recorder rotates files when AirPlay metadata changes, using `FLUSH` as the preferred track boundary signal.
+
+Example configuration:
+
+```json
+"Recording": {
+  "Enabled": true,
+  "OutputPath": "recordings",
+  "SplitTracks": true,
+  "SaveArtwork": true,
+  "WriteMetadataJson": true
+}
+```
+
+Track splitting is best-effort because it depends on the order in which the sender delivers metadata and flush events. Seeking within a track may still produce an additional split on some clients.
   
 ## How To
 

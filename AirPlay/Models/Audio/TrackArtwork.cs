@@ -1,11 +1,9 @@
-﻿using System;
 namespace AirPlay.Models
 {
-    public struct PcmData
+    public sealed class TrackArtwork
     {
         public string SessionId { get; set; }
-        public int Length { get; set; }
+        public string ContentType { get; set; }
         public byte[] Data { get; set; }
-        public ulong Pts { get; set; }
     }
 }
